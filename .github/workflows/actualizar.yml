@@ -5,10 +5,17 @@ on:
     paths:
       - 'data/*.xlsx'
       - 'data/*.xls'
-  workflow_dispatch:          # permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:
+
+# Evita que dos ejecuciones intenten publicar Pages al mismo tiempo.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 permissions:
-  contents: write             # necesario para hacer commit del HTML actualizado
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   actualizar:
@@ -36,7 +43,7 @@ jobs:
       - name: Generar dashboard actualizado
         run: python actualizar_dashboard.py --excel "${{ steps.find_excel.outputs.excel }}" --output index.html
 
-      - name: Publicar cambios
+      - name: Publicar cambios en el repositorio
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
