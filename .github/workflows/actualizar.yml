@@ -1,0 +1,45 @@
+name: Actualizar Dashboard
+
+on:
+  push:
+    paths:
+      - 'data/*.xlsx'
+      - 'data/*.xls'
+  workflow_dispatch:          # permite ejecutarlo manualmente desde GitHub
+
+permissions:
+  contents: write             # necesario para hacer commit del HTML actualizado
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pandas openpyxl
+
+      - name: Encontrar el Excel más reciente en data/
+        id: find_excel
+        run: |
+          EXCEL=$(ls data/*.xlsx data/*.xls 2>/dev/null | head -1)
+          echo "excel=$EXCEL" >> $GITHUB_OUTPUT
+          echo "Excel encontrado: $EXCEL"
+
+      - name: Generar dashboard actualizado
+        run: python actualizar_dashboard.py --excel "${{ steps.find_excel.outputs.excel }}" --output index.html
+
+      - name: Publicar cambios
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "🔄 Dashboard actualizado desde ${{ steps.find_excel.outputs.excel }}"
+          git push
