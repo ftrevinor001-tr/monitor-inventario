@@ -175,7 +175,7 @@ td{padding:8px 13px;vertical-align:middle;}
       <div class="hd-icon">📦</div>
       <div>
         <h1>Monitor de Inventario</h1>
-        <p id="periodo-txt">23 Mar – 11 May 2026</p>
+        <p id="periodo-txt">Cargando...</p>
       </div>
     </div>
     <div class="hd-right">
@@ -530,6 +530,17 @@ function hideLoading(){document.getElementById('loading').classList.remove('show
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 
 // ── INIT ──
+// Set period from embedded data
+(function(){
+  const fmt = s => {
+    if(!s) return '—';
+    const [y,m,day] = s.split('-');
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
+  };
+  document.getElementById('periodo-txt').textContent =
+    fmt(DB.firstDate) + ' – ' + fmt(DB.lastDate) + ' · ' + DB.totalDays + ' días registrados';
+})();
 buildMonthChips();
 enriched=buildEnriched();
 rebuildCascade();
