@@ -43,4 +43,3 @@ jobs:
           git add index.html
           git diff --staged --quiet || git commit -m "🔄 Dashboard actualizado desde ${{ steps.find_excel.outputs.excel }}"
           git push
-          
