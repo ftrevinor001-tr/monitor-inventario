@@ -6,7 +6,7 @@
 <title>Monitor de Inventario</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- DATA STORES: updated by saveDashboard() before serializing outerHTML -->
+<!-- DATA STORES -->
 <script id="db-store"     type="application/json">__DB__</script>
 <script id="maxdays-store"type="application/json">__MAXDAYS__</script>
 <script id="labels-store" type="application/json">__LABELS__</script>
@@ -35,17 +35,8 @@ header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--bor
 .hd-left h1{font-size:14px;font-weight:700;letter-spacing:-.2px;}
 .hd-left p{font-size:11px;color:var(--muted);margin-top:1px;font-family:'JetBrains Mono',monospace;}
 .hd-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
-
-/* HEADER BUTTONS */
-.upload-zone{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1.5px dashed var(--border2);border-radius:8px;padding:5px 11px;cursor:pointer;transition:all .2s;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;}
-.upload-zone:hover,.upload-zone.drag-over{border-color:var(--ab);color:var(--ab);background:var(--ab-lt);}
-.upload-zone input{display:none;}
-.src-badge{display:none;align-items:center;gap:4px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:6px;padding:3px 8px;font-size:11px;color:#276749;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hd-btn{border:none;padding:6px 13px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;}
 .hd-btn:hover:not(:disabled){transform:translateY(-1px);}
-.hd-btn:disabled{opacity:.45;cursor:default;transform:none;}
-.btn-save{background:linear-gradient(135deg,#276749,#38a169);color:#fff;box-shadow:0 2px 8px rgba(56,161,105,.3);}
-.btn-save:hover:not(:disabled){box-shadow:0 4px 12px rgba(56,161,105,.4);}
 .btn-export{background:linear-gradient(135deg,#2b6cb0,#4299e1);color:#fff;box-shadow:0 2px 8px rgba(66,153,225,.3);}
 .btn-export:hover:not(:disabled){box-shadow:0 4px 12px rgba(66,153,225,.4);}
 
@@ -188,12 +179,6 @@ td{padding:8px 13px;vertical-align:middle;}
       </div>
     </div>
     <div class="hd-right">
-      <label class="upload-zone" id="upload-zone">
-        📂 Actualizar con Excel
-        <input type="file" id="file-input" accept=".xlsx,.xls">
-      </label>
-      <div class="src-badge" id="src-badge">✓ <span id="src-name"></span></div>
-      <button class="hd-btn btn-save" id="btn-save" onclick="saveDashboard()">💾 Guardar dashboard</button>
       <button class="hd-btn btn-export" onclick="exportExcel()">↓ Exportar Excel</button>
     </div>
   </header>
@@ -290,9 +275,6 @@ td{padding:8px 13px;vertical-align:middle;}
 
 <script>
 // ── READ DATA FROM JSON STORES ──
-// These <script type="application/json"> tags hold all mutable state.
-// saveDashboard() updates their textContent before serializing outerHTML,
-// so the saved file always contains the latest data.
 let DB          = JSON.parse(document.getElementById('db-store').textContent);
 let MAX_DAYS_MAP= JSON.parse(document.getElementById('maxdays-store').textContent);
 const ML        = JSON.parse(document.getElementById('labels-store').textContent);
@@ -343,85 +325,6 @@ function toggleMonth(m){
   activeMeses.has(m)?activeMeses.delete(m):activeMeses.add(m);
   document.querySelectorAll('.mc').forEach(b=>b.classList.toggle('active',activeMeses.has(b.dataset.m)));
   enriched=buildEnriched(); rebuildCascade(); applyFilters();
-}
-
-// ── DRAG & DROP ──
-const zone=document.getElementById('upload-zone');
-zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag-over');});
-zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
-zone.addEventListener('drop',     e=>{e.preventDefault();zone.classList.remove('drag-over');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);});
-document.getElementById('file-input').addEventListener('change',e=>{if(e.target.files[0])processFile(e.target.files[0]);});
-
-function processFile(file){
-  showLoading('Leyendo archivo...');
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
-      const preferred=wb.SheetNames.find(n=>n.toLowerCase().includes('historico')||n.toLowerCase().includes('histórico')||n.toLowerCase().includes('faltante'));
-      let bestSheet=null,bestCols=0;
-      wb.SheetNames.forEach(n=>{const ws=wb.Sheets[n];if(!ws['!ref'])return;const rng=XLSX.utils.decode_range(ws['!ref']);const c=rng.e.c-rng.s.c;if(c>bestCols){bestCols=c;bestSheet=n;}});
-      const sheetName=preferred||bestSheet||wb.SheetNames[0];
-      showLoading('Leyendo hoja: '+sheetName);
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{raw:false,defval:''});
-      if(!rows.length){hideLoading();showToast('La hoja está vacía');return;}
-      const keys=Object.keys(rows[0]);
-      const find=hints=>keys.find(k=>hints.some(h=>k.toLowerCase().includes(h)))||'';
-      const colFecha =find(['día','dia','fecha'])||keys[0];
-      const colClave =find(['clave']);
-      const colNombre=find(['nombre']);
-      const colMarca =find(['marca']);
-      const colComp  =find(['comprador']);
-      const colStat  =find(['clasificacion 2','clasificación 2']);
-      const clKeys   =keys.filter(k=>k.toLowerCase().includes('clasificaci')&&!k.includes('2')&&!k.toLowerCase().includes('punto'));
-      const colCL    =clKeys.find(k=>!k.toLowerCase().includes('rotaci'))||clKeys[0]||'';
-      const colCR    =clKeys.find(k=>k.toLowerCase().includes('rotaci'))||clKeys[1]||'';
-      if(!colClave||!colStat){hideLoading();showToast('Columnas necesarias no encontradas');return;}
-      showLoading('Calculando días...');
-      function parseMes(v){const d=new Date(String(v).trim());if(isNaN(d))return String(v).slice(0,7);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-      const EXCLUIR_ROT = ['NUEVOS'];   // clasificaciones excluidas del análisis
-      const map={},comps=new Set(),marcas=new Set(),cls=new Set(),crs=new Set(),monthDays={};
-      rows.forEach(r=>{
-        const clave=String(r[colClave]||'').trim(),stat=String(r[colStat]||'').toUpperCase().trim(),fecha=String(r[colFecha]||'').trim();
-        if(!clave||!stat||!fecha)return;
-        const cr=String(r[colCR]||'').trim();
-        if(EXCLUIR_ROT.includes(cr)) return;   // ← excluir NUEVOS
-        const mes=parseMes(fecha),nombre=String(r[colNombre]||'').trim(),marca=String(r[colMarca]||'').trim(),
-              comp=String(r[colComp]||'').trim(),cl=String(r[colCL]||'').trim();
-        if(marca)marcas.add(marca);if(comp)comps.add(comp);if(cl)cls.add(cl);if(cr)crs.add(cr);
-        if(!monthDays[mes])monthDays[mes]=new Set();monthDays[mes].add(fecha);
-        if(!map[clave])map[clave]={c:clave,n:nombre,m:marca,cp:comp,cl,cr,mo:{}};
-        if(!map[clave].mo[mes])map[clave].mo[mes]={fD:new Set(),rD:new Set()};
-        if(stat==='FALTANTE')map[clave].mo[mes].fD.add(fecha);
-        if(stat==='RIESGO')  map[clave].mo[mes].rD.add(fecha);
-      });
-      const records=Object.values(map).map(v=>{
-        const mo={};
-        Object.keys(v.mo).forEach(mes=>{
-          const f=v.mo[mes].fD.size, r=v.mo[mes].rD.size;
-          if(f>0||r>0) mo[mes]={f,r};
-        });
-        return{c:v.c,n:v.n.slice(0,60),m:v.m,cp:v.cp,cl:v.cl,cr:v.cr,mo};
-      }).filter(v=>Object.values(v.mo).some(m=>m.f+m.r>0));
-      const newMaxDays={};Object.keys(monthDays).forEach(m=>{newMaxDays[m]=monthDays[m].size;});
-      const newCalDays={};Object.keys(monthDays).forEach(m=>{const[y,mo]=m.split('-').map(Number);newCalDays[m]=new Date(y,mo,0).getDate();});
-      const allD=[...new Set(Object.values(monthDays).flatMap(s=>[...s]))].sort();
-      DB={data:records,compradores:[...comps].sort(),marcas:[...marcas].sort(),
-          clasifLetra:[...cls].sort(),clasifRot:[...crs].sort(),
-          meses:Object.keys(monthDays).sort(),
-          totalDays:newMaxDays ? Object.values(newMaxDays).reduce((a,b)=>a+b,0) : allD.length};
-      MAX_DAYS_MAP=newMaxDays;
-      CAL_DAYS=newCalDays;
-      activeMeses.clear();
-      const sd=[...new Set(Object.values(monthDays).flatMap(s=>[...s]))].sort();
-      document.getElementById('periodo-txt').textContent=(sd[0]||'')+' – '+(sd.slice(-1)[0]||'')+' · '+sheetName;
-      document.getElementById('src-badge').style.display='flex';
-      document.getElementById('src-name').textContent=file.name;
-      buildMonthChips();clearAll();hideLoading();
-      showToast('✓ '+records.length+' claves cargadas de "'+sheetName+'"');
-    }catch(err){hideLoading();showToast('Error: '+err.message);console.error(err);}
-  };
-  reader.readAsArrayBuffer(file);
 }
 
 // ── CASCADE FILTERS ──
@@ -519,41 +422,6 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb,ws,'Inventario');
   XLSX.writeFile(wb,`Inventario_${document.getElementById('sel-comp').value||'TODOS'}_${new Date().toISOString().slice(0,10)}.xlsx`);
   showToast('✓ Archivo exportado');
-}
-
-// ── SAVE DASHBOARD ──
-// Strategy: update the two <script type="application/json"> data stores,
-// then serialize document.documentElement.outerHTML and download.
-// This is reliable because textContent of <script> tags is preserved verbatim by outerHTML.
-function saveDashboard(){
-  const btn=document.getElementById('btn-save');
-  btn.disabled=true; btn.textContent='⏳ Generando...';
-  setTimeout(()=>{
-    try{
-      // 1. Write current state into the JSON store elements
-      document.getElementById('db-store').textContent     = JSON.stringify(DB);
-      document.getElementById('maxdays-store').textContent= JSON.stringify(MAX_DAYS_MAP);
-      document.getElementById('caldays-store').textContent= JSON.stringify(CAL_DAYS);
-      // (labels-store never changes, no need to update)
-
-      // 2. Serialize the full page
-      const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-
-      // 3. Download
-      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;
-      a.download='Monitor_Inventario_'+new Date().toISOString().slice(0,10)+'.html';
-      document.body.appendChild(a);a.click();document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('✓ Dashboard guardado correctamente');
-    }catch(err){
-      showToast('Error: '+err.message); console.error(err);
-    }finally{
-      btn.disabled=false; btn.innerHTML='💾 Guardar dashboard';
-    }
-  },80);
 }
 
 // ── TAB SWITCHING ──
