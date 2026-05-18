@@ -132,6 +132,11 @@ data_out = {
     "clasifLetra": sorted(df[col_cl].dropna().unique().tolist()) if col_cl else [],
     "clasifRot":   sorted(df[col_cr].dropna().unique().tolist()) if col_cr else [],
     "meses":       sorted(df["mes"].unique().tolist()),
+    "calDays":     {k: int(v) for k, v in cal_days.items()},
+    "totalDays":   int(total_days),
+    "firstDate":   all_dates[0],
+    "lastDate":    all_dates[-1],
+}
 
 
 print(f"✅ {len(records)} claves procesadas | {total_days} días en BD")
