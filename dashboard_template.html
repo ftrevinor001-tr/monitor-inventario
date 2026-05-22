@@ -40,16 +40,6 @@ header{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--bor
 .btn-export{background:linear-gradient(135deg,#2b6cb0,#4299e1);color:#fff;box-shadow:0 2px 8px rgba(66,153,225,.3);}
 .btn-export:hover:not(:disabled){box-shadow:0 4px 12px rgba(66,153,225,.4);}
 
-/* STATS */
-.stats-row{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 22px 0;}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;box-shadow:var(--sh);}
-.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
-.stat-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;line-height:1.1;margin-top:3px;}
-.sc .stat-val{color:var(--text);}
-.sf .stat-val{color:var(--af);}
-.sr .stat-val{color:var(--ar);}
-.sb .stat-val{color:var(--ab);}
-
 /* FILTERS */
 .filters-card{flex-shrink:0;margin:10px 22px 0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;box-shadow:var(--sh);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
 .fg{display:flex;flex-direction:column;gap:4px;}
@@ -76,9 +66,15 @@ select:focus,input:focus{border-color:var(--ab);box-shadow:0 0 0 3px rgba(66,153
 .per-page select{min-width:auto;padding:3px 7px;font-size:11px;}
 .table-scroll{flex:1;overflow-y:auto;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
-thead th{position:sticky;top:0;z-index:10;background:var(--surface2);padding:9px 13px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+thead th{position:sticky;top:0;z-index:10;background:var(--surface2);padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;vertical-align:bottom;}
 thead th:hover,thead th.active{color:var(--ab);}
-.si{margin-left:3px;opacity:.3;font-size:9px;}
+.th-w{display:flex;flex-direction:column;gap:2px;line-height:1.15;}
+.th-l1{font-size:10px;font-weight:700;letter-spacing:.4px;}
+.th-l2{font-size:9px;font-weight:600;letter-spacing:.3px;opacity:.85;}
+.th-l2.fc{color:var(--af);}
+.th-l2.rc{color:var(--ar);}
+.th-l2.ac{color:var(--ab);}
+.si{margin-left:2px;opacity:.3;font-size:9px;}
 thead th.active .si{opacity:1;}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
@@ -88,7 +84,6 @@ td{padding:8px 13px;vertical-align:middle;}
 .td-nm{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text2);}
 .td-mk{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:500;}
 .td-cp{font-size:11px;white-space:nowrap;font-weight:500;color:var(--text2);}
-.td-cl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-align:center;}
 .td-cr{font-size:11px;color:var(--text2);white-space:nowrap;}
 .bar-cell{min-width:110px;}
 .bar-wrap{display:flex;align-items:center;gap:6px;}
@@ -183,13 +178,6 @@ td{padding:8px 13px;vertical-align:middle;}
     </div>
   </header>
 
-  <div class="stats-row">
-    <div class="stat sc"><div class="stat-lbl">Claves filtradas</div><div class="stat-val" id="st-c">—</div></div>
-    <div class="stat sf"><div class="stat-lbl">Máx. días faltante</div><div class="stat-val" id="st-f">—</div></div>
-    <div class="stat sr"><div class="stat-lbl">Máx. días riesgo</div><div class="stat-val" id="st-r">—</div></div>
-    <div class="stat sb"><div class="stat-lbl">Total días máx.</div><div class="stat-val" id="st-t">—</div></div>
-  </div>
-
   <div class="filters-card">
     <div class="fg"><label>Comprador</label>
       <select id="sel-comp" onchange="onFilter()"><option value="">Todos</option></select></div>
@@ -231,16 +219,20 @@ td{padding:8px 13px;vertical-align:middle;}
     <div class="table-scroll">
       <table>
         <thead><tr>
-          <th onclick="sortBy('c')"  id="th-c" >Clave<span class="si">↕</span></th>
-          <th>Nombre</th>
-          <th onclick="sortBy('m')"  id="th-m" >Marca<span class="si">↕</span></th>
-          <th onclick="sortBy('cp')" id="th-cp">Comprador<span class="si">↕</span></th>
-          <th onclick="sortBy('cl')" id="th-cl">Clasif.<span class="si">↕</span></th>
-          <th onclick="sortBy('cr')" id="th-cr">Rotación<span class="si">↕</span></th>
-          <th onclick="sortBy('f')"  id="th-f" >Días Faltante<span class="si">↕</span></th>
-          <th onclick="sortBy('r')"  id="th-r" >Días Riesgo<span class="si">↕</span></th>
-          <th onclick="sortBy('t')"  id="th-t" >Total Días<span class="si">↕</span></th>
-          <th>Tipo</th>
+          <th onclick="sortBy('c')"    id="th-c"   ><div class="th-w"><span class="th-l1">Clave<span class="si">↕</span></span></div></th>
+          <th><div class="th-w"><span class="th-l1">Nombre</span></div></th>
+          <th onclick="sortBy('m')"    id="th-m"   ><div class="th-w"><span class="th-l1">Marca<span class="si">↕</span></span></div></th>
+          <th onclick="sortBy('cp')"   id="th-cp"  ><div class="th-w"><span class="th-l1">Comprador<span class="si">↕</span></span></div></th>
+          <th onclick="sortBy('cr')"   id="th-cr"  ><div class="th-w"><span class="th-l1">Rotación<span class="si">↕</span></span></div></th>
+          <th onclick="sortBy('f')"    id="th-f"   ><div class="th-w"><span class="th-l1">Días<span class="si">↕</span></span><span class="th-l2 fc" id="th-f-sub">de los últimos...</span></div></th>
+          <th onclick="sortBy('r')"    id="th-r"   ><div class="th-w"><span class="th-l1">Días<span class="si">↕</span></span><span class="th-l2 rc" id="th-r-sub">Riesgo</span></div></th>
+          <th onclick="sortBy('gif')"  id="th-gif" ><div class="th-w"><span class="th-l1">Inicio<span class="si">↕</span></span><span class="th-l2 fc">Faltante</span></div></th>
+          <th onclick="sortBy('glf')"  id="th-glf" ><div class="th-w"><span class="th-l1">Fin<span class="si">↕</span></span><span class="th-l2 fc">Faltante</span></div></th>
+          <th onclick="sortBy('dfa')"  id="th-dfa" ><div class="th-w"><span class="th-l1">Días<span class="si">↕</span></span><span class="th-l2 fc">en Faltante</span></div></th>
+          <th onclick="sortBy('gir')"  id="th-gir" ><div class="th-w"><span class="th-l1">Inicio<span class="si">↕</span></span><span class="th-l2 rc">Riesgo</span></div></th>
+          <th onclick="sortBy('glr')"  id="th-glr" ><div class="th-w"><span class="th-l1">Fin<span class="si">↕</span></span><span class="th-l2 rc">Riesgo</span></div></th>
+          <th onclick="sortBy('drfa')" id="th-drfa"><div class="th-w"><span class="th-l1">Días<span class="si">↕</span></span><span class="th-l2 rc">en Riesgo</span></div></th>
+          <th><div class="th-w"><span class="th-l1">Tipo</span></div></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -254,7 +246,6 @@ td{padding:8px 13px;vertical-align:middle;}
 
   <!-- TABLERO DE FALTANTES -->
   <div class="tablero-area" id="tablero-area">
-    <div class="summary-pills" id="pills-row"></div>
     <div class="tablero-grid">
       <div class="card">
         <div class="card-title">Claves con faltante por semana &nbsp;<span id="tb-total-f">—</span></div>
@@ -264,10 +255,6 @@ td{padding:8px 13px;vertical-align:middle;}
         <div class="card-title">Días faltante por comprador</div>
         <div class="claves-scroll"><table class="breakdown-table" id="tbl-comprador"></table></div>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Top claves con más días de faltante</div>
-      <div class="claves-scroll"><table class="breakdown-table" id="tbl-top-claves"></table></div>
     </div>
   </div>
 
@@ -293,11 +280,18 @@ function calcFRT(d){
   if(activeMeses.size === 0){
     let f=0, r=0;
     Object.values(d.mo).forEach(v=>{ f+=v.f||0; r+=v.r||0; });
-    return { f, r, t: f+r };
+    return { f, r, t:f+r, gir:d.gir, glr:d.glr, gif:d.gif, glf:d.glf, drfa:d.drfa||0, dfa:d.dfa||0 };
   }
-  let f=0, r=0;
-  activeMeses.forEach(m=>{ if(d.mo[m]){ f+=d.mo[m].f||0; r+=d.mo[m].r||0; } });
-  return { f, r, t: f+r };
+  let f=0, r=0, ir=null, lr=null, gif=null, glf=null;
+  [...activeMeses].sort().forEach(m=>{
+    const v=d.mo[m]; if(!v) return;
+    f+=v.f||0; r+=v.r||0;
+    if(v['ir'] && (!ir || v['ir']<ir)) ir=v['ir'];
+    if(v['lr'] && (!lr || v['lr']>lr)) lr=v['lr'];
+    if(v['if'] && (!gif|| v['if']<gif))gif=v['if'];
+    if(v['lf'] && (!glf|| v['lf']>glf))glf=v['lf'];
+  });
+  return { f, r, t:f+r, gir:ir, glr:lr, gif, glf, drfa:d.drfa||0, dfa:d.dfa||0 };
 }
 
 // Barra escalada sobre el total de días registrados en la BD del período seleccionado
@@ -321,9 +315,32 @@ function buildMonthChips(){
     c.appendChild(b);
   });
 }
+function updateColHeaders(){
+  const n = activeMeses.size;
+  const totalMeses = DB.meses ? DB.meses.length : 0;
+  let fLabel = '', rLabel = '';
+  if(n === 0){
+    fLabel = 'Faltante · ' + totalMeses + ' mes' + (totalMeses === 1 ? '' : 'es');
+    rLabel = 'Riesgo · '   + totalMeses + ' mes' + (totalMeses === 1 ? '' : 'es');
+  } else if(n === 1){
+    const m = [...activeMeses][0];
+    const ml = ML[m] || m;
+    fLabel = 'Faltante · ' + ml;
+    rLabel = 'Riesgo · '   + ml;
+  } else {
+    fLabel = 'Faltante · ' + n + ' meses';
+    rLabel = 'Riesgo · '   + n + ' meses';
+  }
+  const fs = document.getElementById('th-f-sub');
+  const rs = document.getElementById('th-r-sub');
+  if(fs) fs.textContent = fLabel;
+  if(rs) rs.textContent = rLabel;
+}
+
 function toggleMonth(m){
   activeMeses.has(m)?activeMeses.delete(m):activeMeses.add(m);
   document.querySelectorAll('.mc').forEach(b=>b.classList.toggle('active',activeMeses.has(b.dataset.m)));
+  updateColHeaders();
   enriched=buildEnriched(); rebuildCascade(); applyFilters();
 }
 
@@ -378,12 +395,18 @@ function clearAll(){
   document.getElementById('search').value='';statusFilter='all';activeMeses.clear();
   document.querySelectorAll('.sbtn').forEach(b=>b.className='sbtn');document.getElementById('btn-all').classList.add('a-all');
   document.querySelectorAll('.mc').forEach(b=>b.classList.remove('active'));
-  enriched=buildEnriched();rebuildCascade();applyFilters();
+  enriched=buildEnriched(); updateColHeaders(); rebuildCascade(); applyFilters();
 }
 
 // ── SORT ──
 function sortBy(col){sortDir=sortCol===col?sortDir*-1:-1;sortCol=col;document.querySelectorAll('thead th').forEach(t=>t.classList.remove('active'));const el=document.getElementById('th-'+col);if(el)el.classList.add('active');sortData();render();}
-function sortData(){filtered.sort((a,b)=>{let av=a[sortCol],bv=b[sortCol];return typeof av==='string'?av.localeCompare(bv)*sortDir:(av-bv)*sortDir;});}
+function sortData(){
+  filtered.sort((a,b)=>{
+    let av=a[sortCol]??'', bv=b[sortCol]??'';
+    if(typeof av==='string') return av.localeCompare(bv)*sortDir;
+    return (av-bv)*sortDir;
+  });
+}
 
 // ── PAGINATION ──
 function changePerPage(){perPage=parseInt(document.getElementById('per-page').value);currentPage=1;render();}
@@ -393,21 +416,42 @@ function nextPage(){const p=Math.ceil(filtered.length/perPage);if(currentPage<p)
 // ── RENDER ──
 function render(){
   const maxD=getMaxDays(),total=filtered.length,pages=Math.max(1,Math.ceil(total/perPage)),start=(currentPage-1)*perPage,slice=filtered.slice(start,start+perPage);
-  document.getElementById('st-c').textContent=total.toLocaleString('es-MX');
-  document.getElementById('st-f').textContent=filtered.reduce((m,d)=>Math.max(m,d.f),0);
-  document.getElementById('st-r').textContent=filtered.reduce((m,d)=>Math.max(m,d.r),0);
-  document.getElementById('st-t').textContent=filtered.reduce((m,d)=>Math.max(m,d.t),0);
   document.getElementById('result-info').textContent=`Mostrando ${start+1}–${Math.min(start+perPage,total)} de ${total} claves`;
   document.getElementById('pg-info').textContent=`${currentPage} / ${pages}`;
   document.getElementById('btn-prev').disabled=currentPage===1;
   document.getElementById('btn-next').disabled=currentPage===pages;
+  const fmtDate = s => {
+    if(!s) return '<span style="color:var(--muted)">—</span>';
+    const [y,mo,day]=s.split('-');
+    const ml=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return `<span style="white-space:nowrap">${parseInt(day)}-${ml[parseInt(mo)-1]}-${y.slice(2)}</span>`;
+  };
+  const lastDBDate = DB.lastDate || '';
   document.getElementById('tbody').innerHTML=slice.map(d=>{
     const fP=Math.min(100,(d.f/maxD*100)).toFixed(1),rP=Math.min(100,(d.r/maxD*100)).toFixed(1);
     const badge=d.f>0&&d.r>0?'<span class="badge ba">AMBOS</span>':d.f>0?'<span class="badge bf">FALTANTE</span>':'<span class="badge br">RIESGO</span>';
-    return`<tr><td class="td-cv">${d.c}</td><td class="td-nm" title="${d.n.replace(/"/g,'&quot;')}">${d.n}</td><td class="td-mk">${d.m}</td><td class="td-cp">${d.cp}</td><td class="td-cl">${d.cl}</td><td class="td-cr">${d.cr}</td>
-    <td class="bar-cell"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill f" style="width:${fP}%"></div></div><span class="bv f">${d.f}</span></div></td>
-    <td class="bar-cell"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill r" style="width:${rP}%"></div></div><span class="bv r">${d.r}</span></div></td>
-    <td class="td-tt">${d.t}</td><td>${badge}</td></tr>`;
+    const dfaC=d.dfa>0?'color:var(--af);font-weight:700':'color:var(--muted)';
+    const drfaC=d.drfa>0?'color:var(--ar);font-weight:700':'color:var(--muted)';
+    // Si glf == última fecha de la BD → producto aún en faltante, no mostrar fin
+    const glf_display = (d.glf && d.glf === lastDBDate)
+      ? '<span style="color:var(--af);font-size:10px;font-weight:600">AÚN ACTIVO</span>'
+      : fmtDate(d.glf);
+    return`<tr>
+      <td class="td-cv">${d.c}</td>
+      <td class="td-nm" title="${d.n.replace(/"/g,'&quot;')}">${d.n}</td>
+      <td class="td-mk">${d.m}</td>
+      <td class="td-cp">${d.cp}</td>
+      <td class="td-cr">${d.cr}</td>
+      <td class="bar-cell"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill f" style="width:${fP}%"></div></div><span class="bv f">${d.f}</span></div></td>
+      <td class="bar-cell"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill r" style="width:${rP}%"></div></div><span class="bv r">${d.r}</span></div></td>
+      <td style="font-size:11px">${fmtDate(d.gif)}</td>
+      <td style="font-size:11px">${glf_display}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;${dfaC}">${d.dfa||0}</td>
+      <td style="font-size:11px">${fmtDate(d.gir)}</td>
+      <td style="font-size:11px">${fmtDate(d.glr)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;${drfaC}">${d.drfa||0}</td>
+      <td>${badge}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -415,8 +459,8 @@ function render(){
 function exportExcel(){
   const wb=XLSX.utils.book_new();
   const mLabel=activeMeses.size>0?[...activeMeses].sort().map(m=>ML[m]||m).join('+'):'TODOS';
-  const rows=[['Clave','Nombre','Marca','Comprador','Clasificación','Rotación','Días Faltante','Días Riesgo','Total Días','Tipo','Mes(es)']];
-  filtered.forEach(d=>{rows.push([d.c,d.n,d.m,d.cp,d.cl,d.cr,d.f,d.r,d.t,d.f>0&&d.r>0?'AMBOS':d.f>0?'FALTANTE':'RIESGO',mLabel]);});
+  const rows=[['Clave','Nombre','Marca','Comprador','Rotación','Días Faltante','Días Riesgo','Inicio Riesgo','Fin Riesgo','Días en Riesgo','Inicio Faltante','Fin Faltante','Días en Faltante','Tipo','Mes(es)']];
+  filtered.forEach(d=>{rows.push([d.c,d.n,d.m,d.cp,d.cr,d.f,d.r,d.gir||'',d.glr||'',d.drfa||0,d.gif||'',d.glf||'',d.dfa||0,d.f>0&&d.r>0?'AMBOS':d.f>0?'FALTANTE':'RIESGO',mLabel]);});
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:10},{wch:48},{wch:22},{wch:24},{wch:10},{wch:18},{wch:14},{wch:12},{wch:12},{wch:12},{wch:18}];
   XLSX.utils.book_append_sheet(wb,ws,'Inventario');
@@ -440,33 +484,19 @@ const WEEK_LABELS = ['1–7 días','8–14 días','15–21 días','22–28 días
 const WEEK_COLORS = ['#c53030','#c05621','#b7791f','#975a16','#744210','#553c0a'];
 
 function renderTablero() {
-  // Use current `filtered` (already computed by applyFilters)
   const withF = filtered.filter(d => d.f > 0);
-
-  // Pills
   const totalF = withF.length;
-  const totalR = filtered.filter(d => d.r > 0).length;
-  const bothAR = filtered.filter(d => d.f > 0 && d.r > 0).length;
-  document.getElementById('pills-row').innerHTML = `
-    <div class="pill pill-f">🔴 ${totalF} claves con faltante</div>
-    <div class="pill pill-r">🟡 ${totalR} claves con riesgo</div>
-    <div class="pill pill-b">🔵 ${bothAR} claves con ambos</div>
-    <div class="pill pill-g">📦 ${filtered.length} claves totales filtradas</div>`;
 
   // Week buckets
   const buckets = [0,0,0,0,0,0];
-  const bucketClaves = [[],[],[],[],[],[]];
   withF.forEach(d => {
-    const idx = Math.min(Math.floor((d.f - 1) / 7), 5);
-    buckets[idx]++;
-    bucketClaves[idx].push(d);
+    buckets[Math.min(Math.floor((d.f - 1) / 7), 5)]++;
   });
   const maxB = Math.max(...buckets, 1);
   document.getElementById('tb-total-f').textContent = totalF;
 
   // Week bars
-  const barsEl = document.getElementById('week-bars');
-  barsEl.innerHTML = WEEK_LABELS.map((lbl, i) => {
+  document.getElementById('week-bars').innerHTML = WEEK_LABELS.map((lbl, i) => {
     const pct = (buckets[i] / maxB * 100).toFixed(1);
     const color = WEEK_COLORS[i];
     return `<div class="week-row">
@@ -502,26 +532,6 @@ function renderTablero() {
         <td style="font-family:'JetBrains Mono',monospace;color:var(--af)">${v.maxF}</td>
       </tr>`;
     }).join('')}</tbody>`;
-
-  // Top claves by faltante days
-  const topClaves = [...withF].sort((a,b) => b.f - a.f).slice(0, 50);
-  const maxCF = topClaves.length ? topClaves[0].f : 1;
-  document.getElementById('tbl-top-claves').innerHTML =
-    `<thead><tr><th>Clave</th><th>Nombre</th><th>Marca</th><th>Comprador</th><th>Semana</th><th>Días faltante</th><th>Distribución</th></tr></thead>
-    <tbody>${topClaves.map(d => {
-      const wk = Math.min(Math.floor((d.f-1)/7)+1, 6);
-      const wkLbl = WEEK_LABELS[wk-1];
-      const pct = (d.f / maxCF * 100).toFixed(1);
-      return `<tr>
-        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--ab)">${d.c}</td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.n}">${d.n}</td>
-        <td style="font-size:11px;color:var(--muted)">${d.m}</td>
-        <td style="font-size:11px">${d.cp}</td>
-        <td><span class="badge bf" style="font-size:10px">${wkLbl}</span></td>
-        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--af)">${d.f}</td>
-        <td><div class="mini-bar-bg" style="min-width:80px"><div class="mini-bar-fill f" style="width:${pct}%"></div></div></td>
-      </tr>`;
-    }).join('')}</tbody>`;
 }
 
 
@@ -544,7 +554,8 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 buildMonthChips();
 enriched=buildEnriched();
 rebuildCascade();
-document.getElementById('th-t').classList.add('active');
+updateColHeaders();
+document.getElementById('th-dfa').classList.add('active');
 applyFilters();
 </script>
 </body>

@@ -99,6 +99,22 @@ meta = df.groupby(col_clave).agg(**{k: v for k, v in agg.items()}).reset_index()
 
 # ── Calcular días por clave/mes/status ───────────────────────────────────────
 print("⚙️  Calculando días faltante y riesgo...")
+
+def calc_extra(f_dates, r_dates):
+    """Calcula última fecha de cada status y racha del último período faltante."""
+    last_f = f_dates[-1] if f_dates else None
+    last_r = r_dates[-1] if r_dates else None
+    if not f_dates:
+        return last_f, last_r, 0, 0
+    all_ev = sorted([(d, 'F') for d in f_dates] + [(d, 'R') for d in r_dates])
+    i = len(all_ev) - 1
+    while i >= 0 and all_ev[i][1] == 'R': i -= 1   # saltar riesgo al final
+    dfa = 0
+    while i >= 0 and all_ev[i][1] == 'F': dfa += 1; i -= 1
+    drfa = 0
+    while i >= 0 and all_ev[i][1] == 'R': drfa += 1; i -= 1
+    return last_f, last_r, drfa, dfa
+
 records = []
 for _, row in meta.iterrows():
     clave = row[col_clave]
@@ -117,6 +133,17 @@ for _, row in meta.iterrows():
     if col_comp:   rec["cp"]= str(row.get("Comp",   ""))
     if col_cl:     rec["cl"]= str(row.get("CL",     "")).strip()
     if col_cr:     rec["cr"]= str(row.get("CR",     "")).strip()
+
+    # Últimas fechas y rachas
+    sub_clave = df[df[col_clave] == row[col_clave]]
+    f_dates   = sorted(sub_clave[sub_clave[col_stat]=="FALTANTE"]["fecha_str"].unique())
+    r_dates   = sorted(sub_clave[sub_clave[col_stat]=="RIESGO"]["fecha_str"].unique())
+    last_f, last_r, drfa, dfa = calc_extra(f_dates, r_dates)
+    rec["lf"]   = last_f
+    rec["lr"]   = last_r
+    rec["drfa"] = drfa
+    rec["dfa"]  = dfa
+
     records.append(rec)
 
 # ── Estadísticas del período ──────────────────────────────────────────────────
