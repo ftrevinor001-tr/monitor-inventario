@@ -300,7 +300,10 @@ function getMaxDays(){
   return [...activeMeses].reduce((a,m)=>a+(MAX_DAYS_MAP[m]||0), 0) || 1;
 }
 function buildEnriched(){
-  return DB.data.map(d=>{const{f,r,t}=calcFRT(d);return{...d,f,r,t};}).filter(d=>d.f>0||d.r>0);
+  return DB.data.map(d=>{
+    const calc = calcFRT(d);           // includes f,r,t AND gir,glr,gif,glf,drfa,dfa
+    return {...d, ...calc};            // spread all — calc fields override d fields for month filter
+  }).filter(d=>d.f>0||d.r>0);
 }
 
 // ── MONTH CHIPS ──
