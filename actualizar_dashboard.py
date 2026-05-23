@@ -8,194 +8,189 @@ con la información embebida lista para GitHub Pages.
 Uso:
     python actualizar_dashboard.py
     python actualizar_dashboard.py --excel data/mi_archivo.xlsx
-
-El script también es ejecutado automáticamente por GitHub Actions
-cada vez que se sube un nuevo archivo .xlsx a la carpeta data/.
 """
 
-import json
-import argparse
-import calendar as cal_lib
-import sys
+import json, argparse, sys, calendar as cal_lib
 from pathlib import Path
 
-# ── Dependencias ──────────────────────────────────────────────────────────────
 try:
     import pandas as pd
 except ImportError:
-    print("ERROR: pandas no está instalado. Ejecuta: pip install pandas openpyxl")
+    print("ERROR: pandas no instalado. Ejecuta: pip install pandas openpyxl")
     sys.exit(1)
 
-# ── Argumentos ────────────────────────────────────────────────────────────────
-parser = argparse.ArgumentParser(description="Actualiza el dashboard de inventario")
-parser.add_argument("--excel",  default="data/datos.xlsx", help="Ruta al archivo Excel")
-parser.add_argument("--output", default="index.html",      help="Archivo HTML de salida")
+parser = argparse.ArgumentParser()
+parser.add_argument("--excel",  default="data/datos.xlsx")
+parser.add_argument("--output", default="index.html")
 args = parser.parse_args()
 
-EXCEL_PATH  = Path(args.excel)
-OUTPUT_PATH = Path(args.output)
-TEMPLATE    = Path("dashboard_template.html")
+EXCEL_PATH = Path(args.excel)
+OUTPUT     = Path(args.output)
+TEMPLATE   = Path("dashboard_template.html")
 
-print(f"📂 Leyendo Excel: {EXCEL_PATH}")
+print(f"📂 Leyendo: {EXCEL_PATH}")
 if not EXCEL_PATH.exists():
-    print(f"ERROR: No se encontró el archivo {EXCEL_PATH}")
-    sys.exit(1)
+    print(f"ERROR: No se encontró {EXCEL_PATH}"); sys.exit(1)
+if not TEMPLATE.exists():
+    print(f"ERROR: No se encontró {TEMPLATE}"); sys.exit(1)
 
-# ── Leer Excel ────────────────────────────────────────────────────────────────
+# ── Leer hoja correcta ────────────────────────────────────────────────────────
 xl = pd.ExcelFile(EXCEL_PATH)
 sheet = next(
-    (s for s in xl.sheet_names if any(k in s.lower() for k in ["historico", "histórico", "faltante"])),
-    xl.sheet_names[0],
+    (s for s in xl.sheet_names if any(k in s.lower() for k in ["historico","histórico","faltante"])),
+    xl.sheet_names[0]
 )
-print(f"📋 Usando hoja: '{sheet}'")
+print(f"📋 Hoja: '{sheet}'")
 df = pd.read_excel(EXCEL_PATH, sheet_name=sheet)
 
-# Detectar columnas de forma flexible
-def find_col(df, hints):
-    for col in df.columns:
-        if any(h in col.lower() for h in hints):
-            return col
+# ── Detectar columnas ─────────────────────────────────────────────────────────
+def find(hints):
+    for c in df.columns:
+        if any(h in c.lower() for h in hints):
+            return c
     return None
 
-col_fecha  = find_col(df, ["día", "dia", "fecha"]) or df.columns[0]
-col_clave  = find_col(df, ["clave"])
-col_nombre = find_col(df, ["nombre"])
-col_marca  = find_col(df, ["marca"])
-col_comp   = find_col(df, ["comprador"])
-col_stat   = find_col(df, ["clasificacion 2", "clasificación 2"])
-col_cl     = next((c for c in df.columns if "clasificaci" in c.lower()
-                   and "2" not in c and "punto" not in c.lower()
-                   and "rotaci" not in c.lower()), None)
-col_cr     = next((c for c in df.columns if "rotaci" in c.lower()
-                   or ("clasificaci" in c.lower() and "2" not in c
-                       and "punto" not in c.lower() and c != col_cl)), None)
+col_fecha  = find(["día","dia","fecha"]) or df.columns[0]
+col_clave  = find(["clave"])
+col_nombre = find(["nombre"])
+col_marca  = find(["marca"])
+col_comp   = find(["comprador"])
+col_stat   = find(["clasificacion 2","clasificación 2"])
+cl_cols    = [c for c in df.columns if "clasificaci" in c.lower()
+              and "2" not in c and "punto" not in c.lower()]
+col_cl     = next((c for c in cl_cols if "rotaci" not in c.lower()), None)
+col_cr     = next((c for c in cl_cols if "rotaci" in c.lower()), None)
 
-missing = [n for n, c in [("clave", col_clave), ("clasificacion 2", col_stat)] if not c]
-if missing:
-    print(f"ERROR: No se encontraron columnas: {missing}")
-    sys.exit(1)
+if not col_clave or not col_stat:
+    print("ERROR: Columnas 'Clave' o 'Clasificacion 2' no encontradas"); sys.exit(1)
 
-# ── Filtrar NUEVOS ────────────────────────────────────────────────────────────
+# ── Preparar datos ────────────────────────────────────────────────────────────
 EXCLUIR = ["NUEVOS"]
 if col_cr:
     antes = len(df)
     df = df[~df[col_cr].isin(EXCLUIR)]
-    print(f"🚫 Excluidas {antes - len(df)} filas con clasificación NUEVOS")
+    print(f"🚫 Excluidas {antes-len(df)} filas NUEVOS")
 
-# ── Preparar fechas ───────────────────────────────────────────────────────────
 df["fecha_str"] = pd.to_datetime(df[col_fecha]).dt.strftime("%Y-%m-%d")
 df["mes"]       = pd.to_datetime(df[col_fecha]).dt.strftime("%Y-%m")
 
-# ── Meta por clave ────────────────────────────────────────────────────────────
-agg = {
-    "Nombre": (col_nombre, "first") if col_nombre else None,
-    "Marca":  (col_marca,  "first") if col_marca  else None,
-    "Comp":   (col_comp,   "first") if col_comp   else None,
-    "CL":     (col_cl,     "first") if col_cl     else None,
-    "CR":     (col_cr,     "first") if col_cr     else None,
-}
-agg = {k: v for k, v in agg.items() if v}
-meta = df.groupby(col_clave).agg(**{k: v for k, v in agg.items()}).reset_index()
-
-# ── Calcular días por clave/mes/status ───────────────────────────────────────
-print("⚙️  Calculando días faltante y riesgo...")
-
-def calc_extra(f_dates, r_dates):
-    """Calcula última fecha de cada status y racha del último período faltante."""
-    last_f = f_dates[-1] if f_dates else None
-    last_r = r_dates[-1] if r_dates else None
+# ── Algoritmo de rachas ───────────────────────────────────────────────────────
+def calc_streaks(f_dates, r_dates):
+    """
+    Retorna:
+      gir  : primer día del RIESGO justo antes del último FALTANTE
+      glr  : último día de ese RIESGO
+      gif  : primer día del último FALTANTE
+      glf  : último día del último FALTANTE (None = sigue activo)
+      drfa : días en ese RIESGO previo
+      dfa  : días en ese último FALTANTE
+    """
     if not f_dates:
-        return last_f, last_r, 0, 0
-    all_ev = sorted([(d, 'F') for d in f_dates] + [(d, 'R') for d in r_dates])
+        return None, None, None, None, 0, 0
+
+    all_ev = sorted([(d,"F") for d in set(f_dates)] + [(d,"R") for d in set(r_dates)])
     i = len(all_ev) - 1
-    while i >= 0 and all_ev[i][1] == 'R': i -= 1   # saltar riesgo al final
+
+    while i >= 0 and all_ev[i][1] == "R": i -= 1        # saltar riesgo al final
+
+    glf = all_ev[i][0] if i >= 0 else None              # último día faltante
     dfa = 0
-    while i >= 0 and all_ev[i][1] == 'F': dfa += 1; i -= 1
+    while i >= 0 and all_ev[i][1] == "F": dfa += 1; i -= 1
+    gif = all_ev[i+1][0] if dfa > 0 else None           # primer día faltante
+
+    glr = all_ev[i][0] if i >= 0 and all_ev[i][1]=="R" else None
     drfa = 0
-    while i >= 0 and all_ev[i][1] == 'R': drfa += 1; i -= 1
-    return last_f, last_r, drfa, dfa
+    while i >= 0 and all_ev[i][1] == "R": drfa += 1; i -= 1
+    gir = all_ev[i+1][0] if drfa > 0 else None          # primer día riesgo previo
+
+    return gir, glr, gif, glf, drfa, dfa
+
+# ── Construir registros ───────────────────────────────────────────────────────
+print("⚙️  Procesando claves...")
+meta = df.groupby(col_clave).agg(
+    Nombre=(col_nombre, "first") if col_nombre else (col_clave,"first"),
+    Marca =(col_marca,  "first") if col_marca  else (col_clave,"first"),
+    Comp  =(col_comp,   "first") if col_comp   else (col_clave,"first"),
+    CL    =(col_cl,     "first") if col_cl     else (col_clave,"first"),
+    CR    =(col_cr,     "first") if col_cr     else (col_clave,"first"),
+).reset_index()
 
 records = []
 for _, row in meta.iterrows():
-    clave = row[col_clave]
-    sub   = df[df[col_clave] == clave]
-    months = {}
+    clave   = row[col_clave]
+    sub     = df[df[col_clave] == clave]
+    months  = {}
+
     for mes, msub in sub.groupby("mes"):
-        f = int(msub[msub[col_stat] == "FALTANTE"]["fecha_str"].nunique())
-        r = int(msub[msub[col_stat] == "RIESGO"]["fecha_str"].nunique())
+        f_d = sorted(msub[msub[col_stat]=="FALTANTE"]["fecha_str"].unique())
+        r_d = sorted(msub[msub[col_stat]=="RIESGO"]["fecha_str"].unique())
+        f, r = len(f_d), len(r_d)
         if f > 0 or r > 0:
-            months[mes] = {"f": f, "r": r}
+            months[mes] = {
+                "f":  f,  "r":  r,
+                "if": f_d[0]  if f_d else None,   # inicio faltante en el mes
+                "lf": f_d[-1] if f_d else None,   # fin faltante en el mes
+                "ir": r_d[0]  if r_d else None,   # inicio riesgo en el mes
+                "lr": r_d[-1] if r_d else None,   # fin riesgo en el mes
+            }
     if not months:
         continue
-    rec = {"c": str(clave), "mo": months}
-    if col_nombre: rec["n"] = str(row.get("Nombre", ""))[:60]
-    if col_marca:  rec["m"] = str(row.get("Marca",  ""))
-    if col_comp:   rec["cp"]= str(row.get("Comp",   ""))
-    if col_cl:     rec["cl"]= str(row.get("CL",     "")).strip()
-    if col_cr:     rec["cr"]= str(row.get("CR",     "")).strip()
 
-    # Últimas fechas y rachas
-    sub_clave = df[df[col_clave] == row[col_clave]]
-    f_dates   = sorted(sub_clave[sub_clave[col_stat]=="FALTANTE"]["fecha_str"].unique())
-    r_dates   = sorted(sub_clave[sub_clave[col_stat]=="RIESGO"]["fecha_str"].unique())
-    last_f, last_r, drfa, dfa = calc_extra(f_dates, r_dates)
-    rec["lf"]   = last_f
-    rec["lr"]   = last_r
-    rec["drfa"] = drfa
-    rec["dfa"]  = dfa
+    # Rachas globales
+    f_dates = sorted(sub[sub[col_stat]=="FALTANTE"]["fecha_str"].unique())
+    r_dates = sorted(sub[sub[col_stat]=="RIESGO"]["fecha_str"].unique())
+    gir, glr, gif, glf, drfa, dfa = calc_streaks(f_dates, r_dates)
 
+    rec = {
+        "c":    str(clave),
+        "mo":   months,
+        "gir":  gir,   "glr": glr,
+        "gif":  gif,   "glf": glf,
+        "drfa": drfa,  "dfa": dfa,
+    }
+    if col_nombre: rec["n"]  = str(row.get("Nombre",""))[:60]
+    if col_marca:  rec["m"]  = str(row.get("Marca", ""))
+    if col_comp:   rec["cp"] = str(row.get("Comp",  ""))
+    if col_cl:     rec["cl"] = str(row.get("CL",    "")).strip()
+    if col_cr:     rec["cr"] = str(row.get("CR",    "")).strip()
     records.append(rec)
 
-# ── Estadísticas del período ──────────────────────────────────────────────────
+# ── Estadísticas ──────────────────────────────────────────────────────────────
 all_dates   = sorted(df["fecha_str"].unique())
-total_days  = df["fecha_str"].nunique()
-max_days_db = {k: int(v) for k, v in df.groupby("mes")["fecha_str"].nunique().items()}
+total_days  = int(df["fecha_str"].nunique())
+max_days_db = {k: int(v) for k,v in df.groupby("mes")["fecha_str"].nunique().items()}
 cal_days    = {m: cal_lib.monthrange(int(m[:4]), int(m[5:]))[1] for m in df["mes"].unique()}
+
+MONTH_LABELS = {
+    f"20{y:02d}-{m:02d}": lbl
+    for y in range(25, 28)
+    for m, lbl in enumerate(["Ene","Feb","Mar","Abr","May","Jun",
+                              "Jul","Ago","Sep","Oct","Nov","Dic"], 1)
+    for lbl in [f"{lbl} 20{y:02d}"]
+}
 
 data_out = {
     "data":        records,
-    "compradores": sorted(df[col_comp].dropna().unique().tolist()) if col_comp else [],
+    "compradores": sorted(df[col_comp].dropna().unique().tolist())  if col_comp else [],
     "marcas":      sorted(df[col_marca].dropna().unique().tolist()) if col_marca else [],
-    "clasifLetra": sorted(df[col_cl].dropna().unique().tolist()) if col_cl else [],
-    "clasifRot":   sorted(df[col_cr].dropna().unique().tolist()) if col_cr else [],
+    "clasifLetra": sorted(df[col_cl].dropna().unique().tolist())    if col_cl else [],
+    "clasifRot":   sorted(df[col_cr].dropna().unique().tolist())    if col_cr else [],
     "meses":       sorted(df["mes"].unique().tolist()),
-    "calDays":     {k: int(v) for k, v in cal_days.items()},
-    "totalDays":   int(total_days),
+    "calDays":     {k: int(v) for k,v in cal_days.items()},
+    "totalDays":   total_days,
     "firstDate":   all_dates[0],
     "lastDate":    all_dates[-1],
 }
 
+print(f"✅ {len(records)} claves | {total_days} días | {all_dates[0]} → {all_dates[-1]}")
 
-print(f"✅ {len(records)} claves procesadas | {total_days} días en BD")
-print(f"   Período: {all_dates[0]} → {all_dates[-1]}")
-print(f"   Meses: {data_out['meses']}")
-
-# ── Inyectar en el template HTML ──────────────────────────────────────────────
-print(f"💾 Generando {OUTPUT_PATH}...")
-if not TEMPLATE.exists():
-    print(f"ERROR: No se encontró {TEMPLATE}. Asegúrate de que esté en el repo.")
-    sys.exit(1)
-
+# ── Generar HTML ──────────────────────────────────────────────────────────────
+print(f"💾 Generando {OUTPUT}...")
 template = TEMPLATE.read_text(encoding="utf-8")
-
-MONTH_LABELS = {
-    "2025-01":"Ene 2025","2025-02":"Feb 2025","2025-03":"Mar 2025",
-    "2025-04":"Abr 2025","2025-05":"May 2025","2025-06":"Jun 2025",
-    "2025-07":"Jul 2025","2025-08":"Ago 2025","2025-09":"Sep 2025",
-    "2025-10":"Oct 2025","2025-11":"Nov 2025","2025-12":"Dic 2025",
-    "2026-01":"Ene 2026","2026-02":"Feb 2026","2026-03":"Mar 2026",
-    "2026-04":"Abr 2026","2026-05":"May 2026","2026-06":"Jun 2026",
-    "2026-07":"Jul 2026","2026-08":"Ago 2026","2026-09":"Sep 2026",
-    "2026-10":"Oct 2026","2026-11":"Nov 2026","2026-12":"Dic 2026",
-}
-
 html = template
-html = html.replace("__DB__",      json.dumps(data_out, ensure_ascii=False, separators=(",", ":")))
+html = html.replace("__DB__",      json.dumps(data_out, ensure_ascii=False, separators=(",",":")))
 html = html.replace("__MAXDAYS__", json.dumps(max_days_db, ensure_ascii=False))
 html = html.replace("__LABELS__",  json.dumps(MONTH_LABELS, ensure_ascii=False))
-html = html.replace("__CALDAYS__", json.dumps({k: int(v) for k, v in cal_days.items()}, ensure_ascii=False))
-
-OUTPUT_PATH.write_text(html, encoding="utf-8")
-size_kb = OUTPUT_PATH.stat().st_size // 1024
-print(f"✅ {OUTPUT_PATH} generado ({size_kb} KB)")
-print("🚀 Listo para publicar en GitHub Pages")
+html = html.replace("__CALDAYS__", json.dumps({k:int(v) for k,v in cal_days.items()}, ensure_ascii=False))
+OUTPUT.write_text(html, encoding="utf-8")
+print(f"✅ {OUTPUT} listo ({OUTPUT.stat().st_size//1024} KB)")
