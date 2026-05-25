@@ -183,8 +183,6 @@ td{padding:8px 13px;vertical-align:middle;}
       <select id="sel-comp" onchange="onFilter()"><option value="">Todos</option></select></div>
     <div class="fg"><label>Marca</label>
       <select id="sel-marca" onchange="onFilter()"><option value="">Todas</option></select></div>
-    <div class="fg"><label>Clasificación</label>
-      <select id="sel-cl" onchange="onFilter()"><option value="">Todas</option></select></div>
     <div class="fg"><label>Rotación</label>
       <select id="sel-cr" onchange="onFilter()"><option value="">Todas</option></select></div>
     <div class="fdiv"></div>
@@ -232,6 +230,7 @@ td{padding:8px 13px;vertical-align:middle;}
           <th onclick="sortBy('gir')"  id="th-gir" ><div class="th-w"><span class="th-l1">Inicio<span class="si">↕</span></span><span class="th-l2 rc">Riesgo</span></div></th>
           <th onclick="sortBy('glr')"  id="th-glr" ><div class="th-w"><span class="th-l1">Fin<span class="si">↕</span></span><span class="th-l2 rc">Riesgo</span></div></th>
           <th onclick="sortBy('drfa')" id="th-drfa"><div class="th-w"><span class="th-l1">Días<span class="si">↕</span></span><span class="th-l2 rc">en Riesgo</span></div></th>
+          <th onclick="sortBy('mi')"   id="th-mi"  ><div class="th-w"><span class="th-l1">Meses Inv.<span class="si">↕</span></span><span class="th-l2 ac" id="th-mi-sub">al 2026-05-25</span></div></th>
           <th><div class="th-w"><span class="th-l1">Tipo</span></div></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
@@ -348,11 +347,11 @@ function toggleMonth(m){
 }
 
 // ── CASCADE FILTERS ──
-const FORDER=['comp','marca','cl','cr'];
-const KMAP={comp:'cp',marca:'m',cl:'cl',cr:'cr'};
+const FORDER=['comp','marca','cr'];
+const KMAP={comp:'cp',marca:'m',cr:'cr'};
 function getV(){
   return{comp:document.getElementById('sel-comp').value,marca:document.getElementById('sel-marca').value,
-         cl:document.getElementById('sel-cl').value,cr:document.getElementById('sel-cr').value,
+         cr:document.getElementById('sel-cr').value,
          q:document.getElementById('search').value.toLowerCase().trim(),status:statusFilter};
 }
 function passSearch(d,v){
@@ -365,8 +364,7 @@ function rebuildCascade(){
   const v=getV();
   [{id:'sel-comp',field:'cp',before:[],lbl:'Todos'},
    {id:'sel-marca',field:'m',before:['comp'],lbl:'Todas'},
-   {id:'sel-cl',field:'cl',before:['comp','marca'],lbl:'Todas'},
-   {id:'sel-cr',field:'cr',before:['comp','marca','cl'],lbl:'Todas'}
+   {id:'sel-cr',field:'cr',before:['comp','marca'],lbl:'Todas'}
   ].forEach(def=>{
     const others=enriched.filter(d=>{
       if(!passSearch(d,v))return false;
@@ -386,7 +384,7 @@ function applyFilters(){
   const v=getV();
   filtered=enriched.filter(d=>{
     if(v.comp&&d.cp!==v.comp)return false;if(v.marca&&d.m!==v.marca)return false;
-    if(v.cl&&d.cl!==v.cl)return false;if(v.cr&&d.cr!==v.cr)return false;
+    if(v.cr&&d.cr!==v.cr)return false;
     return passSearch(d,v);
   });
   sortData();currentPage=1;render();
@@ -394,7 +392,7 @@ function applyFilters(){
 }
 function setStatus(s){statusFilter=s;document.querySelectorAll('.sbtn').forEach(b=>b.className='sbtn');document.getElementById('btn-'+s).classList.add('a-'+s);onFilter();}
 function clearAll(){
-  ['sel-comp','sel-marca','sel-cl','sel-cr'].forEach(id=>document.getElementById(id).value='');
+  ['sel-comp','sel-marca','sel-cr'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('search').value='';statusFilter='all';activeMeses.clear();
   document.querySelectorAll('.sbtn').forEach(b=>b.className='sbtn');document.getElementById('btn-all').classList.add('a-all');
   document.querySelectorAll('.mc').forEach(b=>b.classList.remove('active'));
@@ -453,6 +451,11 @@ function render(){
       <td style="font-size:11px">${fmtDate(d.gir)}</td>
       <td style="font-size:11px">${fmtDate(d.glr)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;${drfaC}">${d.drfa||0}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;${
+        d.mi===null||d.mi===undefined ? 'color:var(--muted)' :
+        d.mi===0 ? 'color:var(--af);font-weight:700' :
+        d.mi<1   ? 'color:var(--ar);font-weight:700' : 'color:var(--ab)'
+      }">${d.mi===null||d.mi===undefined ? '—' : d.mi.toFixed(2)}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
@@ -462,8 +465,8 @@ function render(){
 function exportExcel(){
   const wb=XLSX.utils.book_new();
   const mLabel=activeMeses.size>0?[...activeMeses].sort().map(m=>ML[m]||m).join('+'):'TODOS';
-  const rows=[['Clave','Nombre','Marca','Comprador','Rotación','Días Faltante','Días Riesgo','Inicio Riesgo','Fin Riesgo','Días en Riesgo','Inicio Faltante','Fin Faltante','Días en Faltante','Tipo','Mes(es)']];
-  filtered.forEach(d=>{rows.push([d.c,d.n,d.m,d.cp,d.cr,d.f,d.r,d.gir||'',d.glr||'',d.drfa||0,d.gif||'',d.glf||'',d.dfa||0,d.f>0&&d.r>0?'AMBOS':d.f>0?'FALTANTE':'RIESGO',mLabel]);});
+  const rows=[['Clave','Nombre','Marca','Comprador','Rotación','Días Faltante','Días Riesgo','Inicio Faltante','Fin Faltante','Días en Faltante','Inicio Riesgo','Fin Riesgo','Días en Riesgo','Meses Inventario','Tipo','Mes(es)']];
+  filtered.forEach(d=>{rows.push([d.c,d.n,d.m,d.cp,d.cr,d.f,d.r,d.gif||'',d.glf||'',d.dfa||0,d.gir||'',d.glr||'',d.drfa||0,d.mi!==null&&d.mi!==undefined?d.mi:'',d.f>0&&d.r>0?'AMBOS':d.f>0?'FALTANTE':'RIESGO',mLabel]);});
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:10},{wch:48},{wch:22},{wch:24},{wch:10},{wch:18},{wch:14},{wch:12},{wch:12},{wch:12},{wch:18}];
   XLSX.utils.book_append_sheet(wb,ws,'Inventario');
@@ -553,6 +556,8 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
   };
   document.getElementById('periodo-txt').textContent =
     fmt(DB.firstDate) + ' – ' + fmt(DB.lastDate) + ' · ' + DB.totalDays + ' días registrados';
+  const miSub = document.getElementById('th-mi-sub');
+  if(miSub && DB.miDate) miSub.textContent = 'al ' + fmt(DB.miDate);
 })();
 buildMonthChips();
 enriched=buildEnriched();
