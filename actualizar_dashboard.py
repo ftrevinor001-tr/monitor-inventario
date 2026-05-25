@@ -74,6 +74,18 @@ if col_cr:
 df["fecha_str"] = pd.to_datetime(df[col_fecha]).dt.strftime("%Y-%m-%d")
 df["mes"]       = pd.to_datetime(df[col_fecha]).dt.strftime("%Y-%m")
 
+# Meses de inventario: solo del último día disponible
+last_date = df["fecha_str"].max()
+col_mi = next((c for c in df.columns if "meses" in c.lower() and "inventario" in c.lower()), None)
+mi_map = {}
+if col_mi:
+    mi_map = (df[df["fecha_str"] == last_date]
+              .groupby(col_clave)[col_mi]
+              .first()
+              .dropna()
+              .to_dict())
+    print(f"📦 Meses inventario: {len(mi_map)} claves al {last_date}")
+
 # ── Algoritmo de rachas ───────────────────────────────────────────────────────
 def calc_streaks(f_dates, r_dates):
     """
@@ -141,12 +153,17 @@ for _, row in meta.iterrows():
     r_dates = sorted(sub[sub[col_stat]=="RIESGO"]["fecha_str"].unique())
     gir, glr, gif, glf, drfa, dfa = calc_streaks(f_dates, r_dates)
 
+    # Meses de inventario del último día
+    mi_val = mi_map.get(clave, None)
+    mi = round(float(mi_val), 2) if mi_val is not None and str(mi_val) != 'nan' else None
+
     rec = {
         "c":    str(clave),
         "mo":   months,
         "gir":  gir,   "glr": glr,
         "gif":  gif,   "glf": glf,
         "drfa": drfa,  "dfa": dfa,
+        "mi":   mi,
     }
     if col_nombre: rec["n"]  = str(row.get("Nombre",""))[:60]
     if col_marca:  rec["m"]  = str(row.get("Marca", ""))
@@ -180,6 +197,7 @@ data_out = {
     "totalDays":   total_days,
     "firstDate":   all_dates[0],
     "lastDate":    all_dates[-1],
+    "miDate":      last_date,
 }
 
 print(f"✅ {len(records)} claves | {total_days} días | {all_dates[0]} → {all_dates[-1]}")
