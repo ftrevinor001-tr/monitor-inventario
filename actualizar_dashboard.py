@@ -56,10 +56,18 @@ col_nombre = find(["nombre"])
 col_marca  = find(["marca"])
 col_comp   = find(["comprador"])
 col_stat   = find(["clasificacion 2","clasificación 2"])
-cl_cols    = [c for c in df.columns if "clasificaci" in c.lower()
-              and "2" not in c and "punto" not in c.lower()]
-col_cl     = next((c for c in cl_cols if "rotaci" not in c.lower()), None)
-col_cr     = next((c for c in cl_cols if "rotaci" in c.lower()), None)
+
+# Clasificación con acento (letra A,B,C…) vs Clasificacion sin acento (rotación)
+# Detect by checking which column has multi-word values like "MEDIA ROTACIÓN"
+cl_cols = [c for c in df.columns if "clasificaci" in c.lower()
+           and "2" not in c and "punto" not in c.lower()]
+col_cl, col_cr = None, None
+for c in cl_cols:
+    sample = df[c].dropna().astype(str).head(20).str.upper()
+    if sample.str.contains("ROTACI|SAGRADO|NUEVA", regex=True).any():
+        col_cr = c   # rotation column
+    else:
+        col_cl = c   # letter classification column
 
 if not col_clave or not col_stat:
     print("ERROR: Columnas 'Clave' o 'Clasificacion 2' no encontradas"); sys.exit(1)
